@@ -5,10 +5,10 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
   :dependencies [[org.clojure/clojure "1.8.0" :scope "provided"]
-                 [org.clojure/clojurescript "1.8.51" :scope "provided"]
+                 [org.clojure/clojurescript "1.9.88" :scope "provided"]
                  [reagent "0.5.1"]
-                 [reagent-forms "0.5.23"]
-                 [reagent-utils "0.1.8"]
+                 [reagent-forms "0.5.24"]
+                 [reagent-utils "0.1.9"]
                  [secretary "1.2.3"]
                  [plato "0.1.12"]]
 
@@ -32,11 +32,11 @@
 
   :profiles {:dev {:dependencies [#_ [prone "1.0.2"]
                                   [prone "1.1.1"]
-                                  [lein-figwheel "0.5.3-1"]
+                                  [lein-figwheel "0.5.4-3"]
                                   [org.clojure/tools.nrepl "0.2.12"]
                                   [com.cemerick/piggieback "0.2.1"]]
 
-                   :plugins [[lein-figwheel "0.5.3-1"]]
+                   :plugins [[lein-figwheel "0.5.3-2"]]
 
                    :figwheel {:http-server-root "public"
                               :nrepl-port 7002

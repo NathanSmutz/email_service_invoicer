@@ -5,6 +5,7 @@
               [reagent.format     :as rf]
               [secretary.core     :as secretary :include-macros true]
               [plato.core         :as plato]
+              [cljs.pprint                      :refer [cl-format]]
               #_ [clojure.string     :as string])
     (:require-macros [reagent.ratom             :refer [reaction]]))
 
@@ -30,7 +31,7 @@
     update-in [:item (-> @invoice-form-atom
                           :item
                           keyword)]  ; Currently plato only stores by keyword
-    merge (select-keys @invoice-form-atom [:client :charge]))
+    merge (select-keys @invoice-form-atom [:client :charge :item-name]))
   (swap! client-item-storage 
     update-in [:client (-> @invoice-form-atom
                           :client
@@ -42,14 +43,10 @@
   [[id & ids] value doc]
   (println id ":" ids)
   (case id
-    (:client) (when-let [saved-info (get-in @client-item-storage [id (keyword value)])]
-                #_ (swap! doc merge saved-info)
+    (:client) (when-let [saved-info (get-in @client-item-storage [id (keyword value)])]              
                 (merge doc saved-info))
-    :item      (when-let [saved-info (get-in @client-item-storage [id (keyword value)])]
-                #_ (swap! doc merge saved-info)
-                (merge doc saved-info (get-in @client-item-storage [:client (keyword (:client saved-info))]))
-                #_ (when (< 0 (count (:client saved-info)))))
-                  
+    :item     (when-let [saved-info (get-in @client-item-storage [id (keyword value)])]
+                (merge doc saved-info (get-in @client-item-storage [:client (keyword (:client saved-info))])))                  
     nil))
   
   
@@ -59,32 +56,57 @@
 (defn add-item-to-list []
   (store-item-details)
   (swap! invoice-form-atom #(-> %
-                                (update-in [:items] conj (select-keys @invoice-form-atom [:item :charge :item-num]))
+                                (update-in [:items] conj (select-keys @invoice-form-atom [:item :charge :item-name]))
                                 (assoc :item nil)
+                                (assoc :item-name nil)
                                 (assoc :charge nil))))
 
 (defn remove-from-vector [v i]
   (vec (concat (subvec v 0 i) (subvec v (inc i)))))
 
+;; Text Helpers
+(defn line-item [left-item right-item width fill-char]
+  (let [l-str      (str left-item)
+        r-str      (str right-item)
+        l-width    (count l-str)
+        r-width    (count r-str)
+        fill-width (- width l-width r-width)
+        filler     (apply str (repeat fill-width fill-char))]
+    (str l-str filler r-str)))
+
+(defn fill-middle [left-item right-item width fill-char]
+  (let [l-str      (str left-item)
+        r-str      (str right-item)
+        l-width    (count l-str)
+        r-width    (count r-str)
+        fill-width (- width l-width r-width)
+        filler     (apply str (repeat fill-width fill-char))]
+    (str l-str filler r-str)))
+
+(defn item-line [id name charge sub-width]
+  (str (fill-middle charge id sub-width "_") name))
+
 (defn item-list []
+  (let [name-width (apply max 
+                          (map (comp count :item-name)
+                               (:items @invoice-form-atom)))
+        id-width (apply max 
+                        (map (comp count str :item)
+                             (:id @invoice-form-atom)))]
+        ;charge-width (apply max 
+        ;                    (map (comp count str :item-name)
+        ;                         (:charge @invoice-form-atom))))]
       (map-indexed (fn [i item]
                     ^{:key i}
-                    [:li.list-group-item (str (:item item) " $" (:charge item))
+                    [:li.list-group-item (str (:item-name item) 
+                                              " " 
+                                              (rf/format (str "%" id-width "s") (:item item)) 
+                                              " $" 
+                                              (:charge item))
                      [:button.delete-button {:on-click #(swap! invoice-form-atom 
                                                           update-in [:items]
                                                           remove-from-vector i )} "x"]])
-        (:items @invoice-form-atom))) 
-
-;; Text Helpers
-(defn line-item [left-item right-item width fill-char]
-  (let [l-str (str left-item)
-        r-str (str right-item)
-        l-width (count l-str)
-        r-width (count r-str)
-        fill-width (- width l-width r-width)
-        filler (apply str (repeat fill-width fill-char))]
-    (str l-str filler r-str)))
-
+        (:items @invoice-form-atom)))) 
 
 
 (def email-link (reaction 
@@ -105,30 +127,27 @@
                         "Bill To: " (:client @invoice-form-atom) "\n"
                         "\n"
                         "Serviced by: " (:agent-name @home-office)
-                        "\n"
-                        ;"Charge Item" "\n"
-                        ;"$" #_ (:charge @invoice-form-atom)
-                        ;"  "
-                        ;(:item @invoice-form-atom)
+                        "\n"                       
                         (line-item "Charge" "Item" email-line-width "_") "\n"
                         (apply str (interpose "\n"
                                     (for [item (:items @invoice-form-atom)]
-                                        (line-item 
-                                          (str "$" (:charge item))
+                                      (str
+                                        (line-item                                         
+                                          (rf/currency-format (:charge item))
                                           (:item item)
                                           email-line-width
-                                          "_"))))
+                                          "_")
+                                        "\t\t"
+                                        (:item-name item)))))
                         "\n"
-                        "\n" #_ (apply str (repeat email-line-width "_"))
                         "\n"
-                        (line-item 
-                          "Total"
-                          (str "$" (apply + (map :charge (:items @invoice-form-atom))))
-                          email-line-width
-                          "_"))))))
-                          
-                        
-#_ (def email-body (reaction (str "This will be the email body")))
+                        "\n"                        
+                        "Total:"
+                        "\n"
+                        (->> (:items @invoice-form-atom)
+                             (map :charge)
+                             (apply +)
+                             rf/currency-format))))))
 
 (def user-info-template
   [:div#user-menu.container-fluid 
@@ -156,9 +175,14 @@
 (def invoice-form-template
   [:div.container-fluid
    
-   [:div.row [:label {:field :label :preamble "Item: "
+   [:div.row [:label {:field :label :preamble "Item ID: "
                       :placeholder "..." :id :item}]
     [:input.form-control {:field :text :id :item}]]
+   
+   [:div.row [:label {:field :label :preamble "Item Name: "
+                      :placeholder "..." :id :item-name}]
+    [:input.form-control {:field :text :id :item-name}]]
+   
    [:div.row 
     [:label {:field :label
              :preamble "Charge: $"
@@ -187,6 +211,7 @@
    [:button#user-menu-button.btn.btn-default {:on-click toggle-user-menu}
     (str (when (:display-user-menu @display-attributes) "Close ") "User Menu")]
    [:h3 "Invoice"]
+   [:h6 (:business-name @home-office) " Agent: " (:agent-name @home-office)]
    (when (:display-user-menu @display-attributes) 
      [bind-fields user-info-template home-office])
    [bind-fields invoice-form-template invoice-form-atom change-invoice-form-event]
