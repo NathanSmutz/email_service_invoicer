@@ -1,12 +1,15 @@
 (ns email-invoicer.core
     (:require [reagent.core       :as reagent   :refer [atom]]              
-              [reagent.session    :as session]
+              #_ [reagent.session    :as session]
               [reagent-forms.core               :refer [bind-fields]]
               [reagent.format     :as rf]
-              [secretary.core     :as secretary :include-macros true]
+              #_ [secretary.core     :as secretary :include-macros true]
               [plato.core         :as plato]
-              [cljs.pprint                      :refer [cl-format]]
-              #_ [clojure.string     :as string])
+              #_ [cljs.pprint        :as pp]
+              #_ [cljs.pprint                      :refer [cl-format]]
+              #_ [clojure.string     :as string]
+              [cljsjs.filesaverjs]
+              [cljs.reader :as reader])    
     (:require-macros [reagent.ratom             :refer [reaction]]))
 
 (def email-line-width 40)
@@ -23,6 +26,35 @@
 ;; Item and client storage
 (plato/restore-atom! "client-item-storage" client-item-storage)
 (plato/keep-updated! "client-item-storage" client-item-storage)
+
+(defn download [filename content & [mime-type]]
+  (let [mime-type (or mime-type (str "text/plain;charset=" (.-characterSet js/document)))
+        blob (new js/Blob
+                  (clj->js [content])
+                  (clj->js {:type mime-type}))]
+    (js/saveAs blob filename)))
+
+
+
+(defn handle-data-upload 
+  "Merges loaded file with currentl client and item data"
+  [e]
+  (let [reader (js/FileReader.)]
+    (set! (.-onload reader) (fn [e] (let [file-data (-> e
+                                                        .-target
+                                                        .-result)]
+                                                        ;reader/read-string)]
+                                      (.log js/console file-data))))
+                                      ;;(swap! client-item-storage #(merge file-data)))))
+                              
+    (as-> (.-currentTarget e) x
+          (.-files x)
+          (aget x 0)
+          ((fn [a]                ;; Debuggery here
+             (.log js/console a) 
+             a) x)
+          (.readAsText reader x))))
+
 
 (defn store-item-details 
   "Stores the client and price of an item"
@@ -41,7 +73,7 @@
 (defn change-invoice-form-event
   "Event for invoice form"
   [[id & ids] value doc]
-  (println id ":" ids)
+  (println id ":" ids)   ;; Debugging code
   (case id
     (:client) (when-let [saved-info (get-in @client-item-storage [id (keyword value)])]              
                 (merge doc saved-info))
@@ -109,46 +141,46 @@
         (:items @invoice-form-atom)))) 
 
 
-(def email-link (reaction 
-                  (str "mailto:"
-                    (:client-email @invoice-form-atom)
-                    "?"
-                    "cc=" (:office-email @home-office)                
-                    "&subject=" 
-                    (rf/encode-uri 
-                      (str "Invoice from " 
-                        (:business-name @home-office)))
-                    "&body="
-                    (rf/encode-uri 
-                      (str
-                        "Invoice" "\n"
-                        (:business-name @home-office) "\n"
-                        "\n"
-                        "Bill To: " (:client @invoice-form-atom) "\n"
-                        "\n"
-                        "Serviced by: " (:agent-name @home-office)
-                        "\n"                       
-                        (line-item "Charge" "Item" email-line-width "_") "\n"
-                        (apply str (interpose "\n"
-                                    (for [item (:items @invoice-form-atom)]
-                                      (str
-                                        (line-item                                         
-                                          (rf/currency-format (:charge item))
-                                          (:item item)
-                                          email-line-width
-                                          "_")
-                                        "\t\t"
-                                        (:item-name item)))))
-                        "\n"
-                        "\n"
-                        "\n"                        
-                        "Total:"
-                        "\n"
-                        (->> (:items @invoice-form-atom)
-                             (map :charge)
-                             (apply +)
-                             rf/currency-format))))))
-
+(def email-link (reaction
+                  (let [{:keys [:office-email :agent-name :business-name]} @home-office
+                        {:keys [:client-email :client :items]}             @invoice-form-atom]
+                    (str "mailto:"
+                      client-email
+                      "?"
+                      "cc=" office-email              
+                      "&subject=" 
+                      (rf/encode-uri 
+                        (str "Invoice from " 
+                          business-name))
+                      "&body="
+                      (rf/encode-uri 
+                        (str
+                          "Invoice" "\n"
+                          business-name "\n"
+                          "\n"
+                          "Bill To: " client "\n"
+                          "\n"
+                          "Serviced by: " agent-name "\n"
+                          (line-item "Charge" "Item" email-line-width "_") "\tDescription" "\n"
+                          (apply str (interpose "\n"
+                                      (for [{:keys [:charge :item :item-name]} items]
+                                        (str
+                                          (line-item                                         
+                                            (rf/currency-format charge)
+                                            item
+                                            email-line-width
+                                            "_")
+                                          "\t"
+                                          item-name))))
+                          "\n"
+                          "\n"                        
+                          "Total:"
+                          "\n"
+                          (->> items
+                               (map :charge)
+                               (apply +)
+                               rf/currency-format)))))))
+  
 (def user-info-template
   [:div#user-menu.container-fluid 
    [:div.row
@@ -169,8 +201,18 @@
              :field :label
              :preamble "Agent Name: "}]
     [:input.form-control {:id :agent-name
-                          :field :text}]]])   
-    
+                          :field :text}]]
+   [:div.row
+    [:p [:br]
+     [:button {:on-click #(download "item_and_client_data.txt" (pr-str @client-item-storage))}
+              "Save App Data"]]
+    [:p 
+     [:label {:for "file-upload"} "Load Client and Item Data" [:input#file-upload {:type "file" :on-change handle-data-upload}]]]
+              
+    [:p
+     [:button {:on-click #(reset! client-item-storage {})}
+      "Clear Client and Item Data"]]]])         
+                                                     
 
 (def invoice-form-template
   [:div.container-fluid
