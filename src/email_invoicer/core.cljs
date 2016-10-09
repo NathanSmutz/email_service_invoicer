@@ -4,28 +4,29 @@
               [reagent-forms.core               :refer [bind-fields]]
               [reagent.format     :as rf]
               #_ [secretary.core     :as secretary :include-macros true]
-              [plato.core         :as plato]
+              #_ [plato.core         :as plato]
               #_ [cljs.pprint        :as pp]
               #_ [cljs.pprint                      :refer [cl-format]]
               #_ [clojure.string     :as string]
               [cljsjs.filesaverjs]
-              [cljs.reader :as reader])    
+              [cljs.reader :as reader]
+              [alandipert.storage-atom          :refer [local-storage]])    
     (:require-macros [reagent.ratom             :refer [reaction]]))
 
 (def email-line-width 40)
 
-(defonce display-attributes (atom {:display-user-menu false}))
-(defonce home-office (atom {}))
-(defonce invoice-form-atom (atom {:items []}))
-(defonce client-item-storage (atom {}))
+(defonce home-office         (local-storage (atom {}) :home-office))
+(defonce client-item-storage (local-storage (atom {}) :client-item-storage))
+(defonce invoice-form-atom   (atom {:items []}))
+(defonce display-attributes  (atom {:display-user-menu false}))
 
 ;; User storage
-(plato/restore-atom! "home-office" home-office)
-(plato/keep-updated! "home-office" home-office)
+;(plato/restore-atom! "home-office" home-office)
+;(plato/keep-updated! "home-office" home-office)
 
 ;; Item and client storage
-(plato/restore-atom! "client-item-storage" client-item-storage)
-(plato/keep-updated! "client-item-storage" client-item-storage)
+;(plato/restore-atom! "client-item-storage" client-item-storage)
+;(plato/keep-updated! "client-item-storage" client-item-storage)
 
 (defn download [filename content & [mime-type]]
   (let [mime-type (or mime-type (str "text/plain;charset=" (.-characterSet js/document)))
@@ -42,10 +43,10 @@
   (let [reader (js/FileReader.)]
     (set! (.-onload reader) (fn [e] (let [file-data (-> e
                                                         .-target
-                                                        .-result)]
-                                                        ;reader/read-string)]
-                                      (.log js/console file-data))))
-                                      ;;(swap! client-item-storage #(merge file-data)))))
+                                                        .-result
+                                                        reader/read-string)]
+                                      ;(.log js/console file-data)
+                                      (swap! client-item-storage merge file-data))))
                               
     (as-> (.-currentTarget e) x
           (.-files x)
@@ -60,25 +61,21 @@
   "Stores the client and price of an item"
   []
   (swap! client-item-storage 
-    update-in [:item (-> @invoice-form-atom
-                          :item
-                          keyword)]  ; Currently plato only stores by keyword
+    update-in [:item (:item @invoice-form-atom)]
     merge (select-keys @invoice-form-atom [:client :charge :item-name]))
   (swap! client-item-storage 
-    update-in [:client (-> @invoice-form-atom
-                          :client
-                          keyword)]  ; Currently plato only stores by keyword
+    update-in [:client (:client @invoice-form-atom)]         
     merge (select-keys @invoice-form-atom [:client-email])))
 
 (defn change-invoice-form-event
   "Event for invoice form"
   [[id & ids] value doc]
-  (println id ":" ids)   ;; Debugging code
+  ;(println id ":" ids)   ;; Debugging code
   (case id
-    (:client) (when-let [saved-info (get-in @client-item-storage [id (keyword value)])]              
+    (:client) (when-let [saved-info (get-in @client-item-storage [id value])]              
                 (merge doc saved-info))
-    :item     (when-let [saved-info (get-in @client-item-storage [id (keyword value)])]
-                (merge doc saved-info (get-in @client-item-storage [:client (keyword (:client saved-info))])))                  
+    :item     (when-let [saved-info (get-in @client-item-storage [id value])]
+                (merge doc saved-info (get-in @client-item-storage [:client (:client saved-info)])))                  
     nil))
   
   

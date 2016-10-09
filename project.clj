@@ -10,8 +10,9 @@
                  [reagent-forms "0.5.24"]
                  [reagent-utils "0.1.9"]
                  #_ [secretary "1.2.3"]
-                 [plato "0.1.12"]
-                 [cljsjs/filesaverjs "1.1.20151003-0"]]
+                 #_ [plato "0.1.12"]
+                 [cljsjs/filesaverjs "1.1.20151003-0"]
+                 [alandipert/storage-atom "2.0.1"]]
   :plugins [[lein-cljsbuild "1.1.4"]]
 
   :min-lein-version "2.5.0"
