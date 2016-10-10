@@ -1,6 +1,8 @@
 # Email Service Invoicer
 A Single Page Web Application for creating and sending service invoices via email.
 
+Go to the app here [Email Service Invoicer](https://nathansmutz.github.io/email_service_invoicer/)
+
 This is a single page serverless application for creatinmg and sending service invoices via email.
 It's aimed at helping people who perform services and repairs for regular clients.  The app remembers the client and the charge
 associated with each item.
