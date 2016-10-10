@@ -1,4 +1,4 @@
-# email_service_invoicer
+# Email Service Invoicer
 A Single Page Web Application for creating and sending service invoices via email.
 
 This is a single page serverless application for creatinmg and sending service invoices via email.
