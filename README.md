@@ -1,6 +1,8 @@
 # Email Service Invoicer
 A Single Page Web Application for creating and sending service invoices via your own email client.
 
+Play with the app here [Email Service Invoicer](https://nathansmutz.github.io/email_service_invoicer/)
+
 ## Remembers your client info, service items and charges
 <!-- <img witdh="300px" src="https://cloud.githubusercontent.com/assets/2293340/19413648/1f529cca-92e8-11e6-80f7-1de09a6df933.png" > -->
 ![screenshot_20161015-145810](https://cloud.githubusercontent.com/assets/2293340/19413648/1f529cca-92e8-11e6-80f7-1de09a6df933.png)
