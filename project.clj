@@ -4,15 +4,13 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
-  :dependencies [[org.clojure/clojure "1.8.0" :scope "provided"]
+  :dependencies [[org.clojure/clojure       "1.8.0"   :scope "provided"]
                  [org.clojure/clojurescript "1.9.229" :scope "provided"]
-                 [reagent "0.5.1"]
-                 [reagent-forms "0.5.24"]
-                 [reagent-utils "0.1.9"]
-                 #_ [secretary "1.2.3"]
-                 #_ [plato "0.1.12"]
-                 [cljsjs/filesaverjs "1.1.20151003-0"]
-                 [alandipert/storage-atom "2.0.1"]]
+                 [reagent                   "0.6.0"]
+                 [reagent-forms             "0.5.27"]
+                 [reagent-utils             "0.2.0"]
+                 [cljsjs/filesaverjs        "1.1.20151003-0"]
+                 [alandipert/storage-atom   "2.0.1"]]
   :plugins [[lein-cljsbuild "1.1.4"]]
 
   :min-lein-version "2.5.0"
@@ -34,7 +32,7 @@
   :profiles {:dev {:dependencies [#_ [prone "1.0.2"]
                                   [prone "1.1.2"]
                                   ;[lein-figwheel "0.5.4-3"]
-                                  [lein-figwheel "0.5.7"]
+                                  [lein-figwheel "0.5.8"]
                                   [org.clojure/tools.nrepl "0.2.12"]
                                   [com.cemerick/piggieback "0.2.1"]]
 

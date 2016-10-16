@@ -1,32 +1,18 @@
 (ns email-invoicer.core
     (:require [reagent.core       :as reagent   :refer [atom]]              
-              #_ [reagent.session    :as session]
               [reagent-forms.core               :refer [bind-fields]]
               [reagent.format     :as rf]
-              #_ [secretary.core     :as secretary :include-macros true]
-              #_ [plato.core         :as plato]
-              #_ [cljs.pprint        :as pp]
-              #_ [cljs.pprint                      :refer [cl-format]]
-              #_ [clojure.string     :as string]
               [cljsjs.filesaverjs]
-              [cljs.reader :as reader]
+              [cljs.reader        :as reader]
               [alandipert.storage-atom          :refer [local-storage]])    
     (:require-macros [reagent.ratom             :refer [reaction]]))
 
-(def email-line-width 40)
+(def email-line-width 25)
 
 (defonce home-office         (local-storage (atom {}) :home-office))
 (defonce client-item-storage (local-storage (atom {}) :client-item-storage))
 (defonce invoice-form-atom   (atom {:items []}))
 (defonce display-attributes  (atom {:display-user-menu false}))
-
-;; User storage
-;(plato/restore-atom! "home-office" home-office)
-;(plato/keep-updated! "home-office" home-office)
-
-;; Item and client storage
-;(plato/restore-atom! "client-item-storage" client-item-storage)
-;(plato/keep-updated! "client-item-storage" client-item-storage)
 
 (defn download [filename content & [mime-type]]
   (let [mime-type (or mime-type (str "text/plain;charset=" (.-characterSet js/document)))
@@ -109,7 +95,7 @@
         l-width    (count l-str)
         r-width    (count r-str)
         fill-width (- width l-width r-width)
-        filler     (apply str (repeat fill-width fill-char))]
+        filler     (clojure.string/join (repeat fill-width fill-char))]
     (str l-str filler r-str)))
 
 (defn item-line [id name charge sub-width]
